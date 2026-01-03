@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiplayer Car Race</title>
+
+<style>
+body { margin:0; background:#111 }
+canvas { display:block; margin:auto; background:#444 }
+</style>
+</head>
+
+<body>
+<canvas id="game" width="360" height="640"></canvas>
+
+<script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+<script>
+const ably = new Ably.Realtime("KFH2jQ.KSseqA:9U2adiC7ZnNFJ3udjlabtaVDzPEqnRHbKoG7zElCdC8");
+const channel = ably.channels.get("car-race");
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let players = {};
+let myId = Math.random().toString(36).substr(2,5);
+
+players[myId] = {
+  x: 160,
+  y: 550,
+  color: "red"
+};
+
+channel.subscribe(msg=>{
+  players[msg.data.id] = msg.data;
+});
+
+function draw(){
+  ctx.clearRect(0,0,360,640);
+
+  // finish line
+  ctx.fillStyle="white";
+  ctx.fillRect(0,50,360,5);
+
+  for(let id in players){
+    let p = players[id];
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x,p.y,20,30);
+  }
+}
+
+setInterval(()=>{
+  channel.publish("move",{
+    id: myId,
+    ...players[myId]
+  });
+  draw();
+},60);
+
+window.addEventListener("touchmove", e=>{
+  players[myId].x = e.touches[0].clientX - 20;
+});
+
+window.addEventListener("touchstart", ()=>{
+  players[myId].y -= 20;
+});
+</script>
+
+</body>
+</html>
